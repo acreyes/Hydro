@@ -25,7 +25,8 @@ double Et(double rho, double vel, double P){
 
 double sgn(double x){
   if(x < 0) return(-1.);
-  else return(1.);
+  else if(x >0) return(1.);
+  else return(0.);
 }
 
 double min(double x, double y, double z){
@@ -111,7 +112,7 @@ Vars make_UR(int i, Vars * U){
 double HLL(int N, Vars * U, Flux * F_HLL){
   int i; double maxalph = 0.;
   for(i=2;i<N+3;++i){
-    Vars UL = U_L(U[i], U[i-1], U[i+1]); Vars UR = U_R(U[i], U[i+1], U[i+2]); //Calculates the conserved variables at the interfaces
+    Vars UL = U_L(U[i-1], U[i-2], U[i]); Vars UR = U_R(U[i], U[i+1], U[i+2]); //Calculates the conserved variables at the interfaces
     double alphap = alpha(UL, UR, 1.);
     double alpham = alpha(UL, UR, -1.);
     Flux FL = get_F(UL); Flux FR = get_F(UR); //Calculates the Fluxes from the left and right at the interface
@@ -119,7 +120,7 @@ double HLL(int N, Vars * U, Flux * F_HLL){
     F_HLL[i-2].mom = (alphap*FL.mom + alpham*FR.mom - alphap*alpham*(UR.velocity - UL.velocity))/(alphap + alpham);
     F_HLL[i-2].energy = (alphap*FL.energy + alpham*FR.energy - alphap*alpham*(UR.energy - UL.energy))/(alphap + alpham);
     maxalph = MAX(maxalph, alphap, alpham);
-    printf("alpha %d %f  %f %f\n", i, alphap, alpham, maxalph);
+    //printf("alpha %d %f  %f %f\n", i, alphap, alpham, maxalph);
   }
   return(maxalph);
 }
@@ -164,15 +165,15 @@ int main(void){
   FILE * fid, * finit;
   fid = fopen("data.dat", "w");
   finit = fopen("init_data.dat", "w");
-  int N = 50; Vars U[N+4]; Flux F_HLL[N+1];
+  int N = 200; Vars U[N+4]; Flux F_HLL[N+1];
   double T, t, dt, dx; T = .14; t = 0; dx = 1./(double)N;
   init_sys(N, U); Write_Cons(N, U, dx, finit);
   //int j;for(j=0;j<2;++j){
   while(t<T){
     dt = advance_system(N, U, F_HLL, dx);
-    t += dt; printf("dt %f\n", dt);
-    break;
+    t += dt; //printf("dt %f\n", dt);
+    //break;
   }
-  Print_Flux(N+1, F_HLL);
+  //Print_Flux(N+1, F_HLL);
   Write_Cons(N, U, dx, fid);
 }

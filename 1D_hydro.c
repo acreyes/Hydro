@@ -58,32 +58,30 @@ double alpha(Vars UL, Vars UR, double pm){
   return(alph);
 }
 
-void make_F(int N, Vars * U, Flux * F){
-  int i;
-  for(i=0;i<N;++i){
-    F[i].rhov = U[i].velocity;
-    F[i].mom = pow(U[i].velocity,2)/U[i].mass + U[i].press;
-    F[i].energy = (U[i].energy + U[i].press)*U[i].velocity/U[i].mass;
-    //printf("Pressure %d  %f\n", i, U[i].press);
-  }
+Flux get_F(Vars U){
+  Flux F;  
+  F.rhov = U.velocity;
+  F.mom = pow(U.velocity,2)/U.mass + U.press;
+  F.energy = (U.energy + U.press)*U.velocity/U.mass;
+  return(F);
 }
 
-double HLL(int N, Vars * U, Flux * F, Flux * F_HLL){
+double HLL(int N, Vars * U, Flux * F_HLL){
   int i; double maxalph = 0.;
   for(i=0;i<N-1;++i){
+    Flux FR, FL; FL = get_F(U[i]); FR = get_F(U[i+1]);
     double alphap = alpha(U[i], U[i+1], 1.);
     double alpham = alpha(U[i], U[i+1], -1.);
-    F_HLL[i].rhov = (alphap*F[i].rhov + alpham*F[i+1].rhov - alphap*alpham*(U[i+1].mass - U[i].mass))/(alphap + alpham);
-    F_HLL[i].mom = (alphap*F[i].mom + alpham*F[i+1].mom - alphap*alpham*(U[i+1].velocity - U[i].velocity))/(alphap + alpham);
-    F_HLL[i].energy = (alphap*F[i].energy + alpham*F[i+1].energy - alphap*alpham*(U[i+1].energy - U[i].energy))/(alphap + alpham);
+    F_HLL[i].rhov = (alphap*FL.rhov + alpham*FR.rhov - alphap*alpham*(U[i+1].mass - U[i].mass))/(alphap + alpham);
+    F_HLL[i].mom = (alphap*FL.mom + alpham*FR.mom - alphap*alpham*(U[i+1].velocity - U[i].velocity))/(alphap + alpham);
+    F_HLL[i].energy = (alphap*FL.energy + alpham*FR.energy - alphap*alpham*(U[i+1].energy - U[i].energy))/(alphap + alpham);
     maxalph = MAX(maxalph, alphap, alpham);
     //printf("%d %f  %f\n", i, alphap, alpham);
   }
   return(maxalph);
 }
 
-double advance_system(int N, Vars * U, Flux * F, Flux * F_HLL, double dx){
-  make_F(N, U, F);//get the fluxes at all points
+double advance_system(int N, Vars * U, Flux * F_HLL, double dx){
   double maxalpha = HLL(N, U, F, F_HLL);//calculate the flux at the interfaces
   double dt = 0.5*dx/maxalpha;
   Vars U_n[N]; int i;
@@ -122,7 +120,7 @@ int main(void){
   FILE * fid, * finit;
   fid = fopen("data.dat", "w");
   finit = fopen("init_data.dat", "w");
-  int N = 200; Vars U[N]; Flux F[N]; Flux F_HLL[N-1];
+  int N = 200; Vars U[N]; Flux F_HLL[N-1];
   double T, t, dt, dx; T = .14; t = 0; dx = 1./(double)N;
   init_sys(N, U); Write_Cons(N, U, dx, finit);
   while(t<T){

@@ -36,44 +36,68 @@ double min(double x, double y, double z){
   return(num);
 }
 double minmod(double x, double y, double z){
-  return(.25 * fabs(sgn(x) + sgn(y))*fabs(sgn(x) + sgn(z))*min(fabs(x), fabs(y), fabs(z)));
+  double minm = .25*fabs(sgn(x) + sgn(y))*(sgn(x) + sgn(z))*min(fabs(x), fabs(y), fabs(z));
+  //if(minm != 0. && minm!= -0.) printf("x y z = %f %f %f minmod = %e\n", x, y, z, minm);
+  return(minm);
 }
 
-Vars U_L(Vars Ui, Vars Uimo, Vars Uipo){
+Vars U_L(Vars Ui, Vars Uimo, Vars Uipo, double dx){
   Vars UL;
-  UL.mass = Ui.mass + 0.5*minmod(thet*(Ui.mass - Uimo.mass), 0.5*(Uipo.mass - Uimo.mass),thet*(Uipo.mass-Ui.mass));
-  UL.velocity = Ui.velocity + 0.5*minmod(thet*(Ui.velocity - Uimo.velocity), 0.5*(Uipo.velocity - Uimo.velocity),thet*(Uipo.velocity-Ui.velocity));
-  UL.energy = Ui.energy + 0.5*minmod(thet*(Ui.energy - Uimo.energy), 0.5*(Uipo.energy - Uimo.energy),thet*(Uipo.energy-Ui.energy));
-  UL.press = Ui.press + 0.5*minmod(thet*(Ui.press - Uimo.press), 0.5*(Uipo.press - Uimo.press),thet*(Uipo.press-Ui.press));
+  UL.mass = Ui.mass + 0.5*dx*minmod(thet*(Ui.mass - Uimo.mass), 0.5*(Uipo.mass - Uimo.mass),thet*(Uipo.mass-Ui.mass));
+  UL.velocity = Ui.velocity + 0.5*dx*minmod(thet*(Ui.velocity - Uimo.velocity), 0.5*(Uipo.velocity - Uimo.velocity),thet*(Uipo.velocity-Ui.velocity));
+  UL.press = Ui.press + 0.5*dx*minmod(thet*(Ui.press - Uimo.press), 0.5*(Uipo.press - Uimo.press),thet*(Uipo.press-Ui.press));
+  //  printf("%f\n", (UL.mass - Ui.mass)/Ui.mass);
+  UL.energy = Et(UL.mass, UL.velocity, UL.press);
   return(UL);
 }
 
-Vars U_R(Vars Ui, Vars Uipo, Vars Uipt){
+Vars U_R(Vars Ui, Vars Uipo, Vars Uipt, double dx){
   Vars UR;
-  UR.mass = Ui.mass - 0.5*minmod(thet*(Uipo.mass-Ui.mass),.5*(Uipt.mass-Ui.mass),thet*(Uipt.mass-Uipo.mass));
-  UR.velocity = Ui.velocity - 0.5*minmod(thet*(Uipo.velocity-Ui.velocity),.5*(Uipt.velocity-Ui.velocity),thet*(Uipt.velocity-Uipo.velocity));
-  UR.energy = Ui.energy - 0.5*minmod(thet*(Uipo.energy-Ui.energy),.5*(Uipt.energy-Ui.energy),thet*(Uipt.energy-Uipo.energy));
-  UR.press = Ui.press - 0.5*minmod(thet*(Uipo.press-Ui.press),.5*(Uipt.press-Ui.press),thet*(Uipt.press-Uipo.press));
+  UR.mass = Uipo.mass - 0.5*dx*minmod(thet*(Uipo.mass-Ui.mass),0.5*(Uipt.mass-Ui.mass),thet*(Uipt.mass-Uipo.mass));
+  UR.velocity = Uipo.velocity - 0.5*dx*minmod(thet*(Uipo.velocity-Ui.velocity),.5*(Uipt.velocity-Ui.velocity),thet*(Uipt.velocity-Uipo.velocity));
+  UR.press = Uipo.press - 0.5*dx*minmod(thet*(Uipo.press-Ui.press), 0.5*(Uipt.press-Ui.press), thet*(Uipt.press-Uipo.press));
+  UR.energy = Et(UR.mass, UR.velocity, UR.press);
   return(UR);
 }
 
-void init_sys(int N, Vars * U){
-  int i;
-  for(i=0;i<N+4;++i){
-    if(i < N/2){
-      U[i].mass = 1.0;
-      U[i].velocity = 0.0;
-      U[i].press = 1.0;
-      //printf("yes %d\n",i);
+void init_sys(int N, Vars * U, double dx, int type){
+  if(type == 1){
+    int i;
+    for(i=0;i<N+4;++i){
+      if(i < N/2){
+	U[i].mass = 1.0;
+	U[i].velocity = 0.0;
+	U[i].press = 1.0;
+	//printf("yes %d\n",i);
+      }
+      else{
+	U[i].mass = 0.1;
+	U[i].velocity = 0.0;
+	U[i].press = 0.125;
+	U[i].energy = Et(U[i].mass, U[i].velocity, U[i].press);
+      }
     }
-    else{
-      U[i].mass = 0.1;
-      U[i].velocity = 0.0;
-      U[i].press = 0.125;
-      U[i].energy = Et(U[i].mass, U[i].velocity, U[i].press);
-    }
-  }
     for(i=0;i<N;++i) U[i].energy = Et(U[i].mass, U[i].velocity, U[i].press);
+  }
+  else if(type == 2){
+    int i;
+    for(i=0;i<N+4;++i){
+      double x = (double)i*dx;
+      if(x < 1./4.){
+	U[i].mass = 3.856;
+	U[i].velocity = 5.629;
+	U[i].press = 10.33;
+	//printf("yes %d\n",i);
+      }
+      else{
+	U[i].mass = 1. - 0.2*sin(32*x);
+	U[i].velocity = 0.0;
+	U[i].press = 1.;
+	U[i].energy = Et(U[i].mass, U[i].velocity, U[i].press);
+      }
+    }
+    for(i=0;i<N;++i) U[i].energy = Et(U[i].mass, U[i].velocity, U[i].press);
+  }
 }
 
 double lambda(Vars U, double pm){
@@ -100,22 +124,16 @@ Flux get_F(Vars U){
   F.energy = (U.energy + U.press)*U.velocity/U.mass;
   return(F);
 }
-Vars get_UL(int i, Vars * U){
-  Vars UL = U_L(U[i], U[i-1], U[i+1]);
-  return(UL);
-}
-Vars make_UR(int i, Vars * U){
-  Vars UR = U_R(U[i], U[i+1], U[i+2]);
-  return(UR);
-}
 
-double HLL(int N, Vars * U, Flux * F_HLL){
+double HLL(int N, Vars * U, Flux * F_HLL, double dx){
   int i; double maxalph = 0.;
   for(i=2;i<N+3;++i){
-    Vars UL = U_L(U[i-1], U[i-2], U[i]); Vars UR = U_R(U[i], U[i+1], U[i+2]); //Calculates the conserved variables at the interfaces
+    Vars UL = U_L(U[i-1], U[i-2], U[i], 1.); Vars UR = U_R(U[i-1], U[i], U[i+1], 1.); //Calculates the conserved variables at the interfaces
+    //Vars UL, UR; UL = U[i-1]; UR = U[i];
     double alphap = alpha(UL, UR, 1.);
     double alpham = alpha(UL, UR, -1.);
     Flux FL = get_F(UL); Flux FR = get_F(UR); //Calculates the Fluxes from the left and right at the interface
+    //Flux FL = get_F(U[i-1]); Flux FR = get_F(U[i]);
     F_HLL[i-2].rhov = (alphap*FL.rhov + alpham*FR.rhov - alphap*alpham*(UR.mass - UL.mass))/(alphap + alpham);
     F_HLL[i-2].mom = (alphap*FL.mom + alpham*FR.mom - alphap*alpham*(UR.velocity - UL.velocity))/(alphap + alpham);
     F_HLL[i-2].energy = (alphap*FL.energy + alpham*FR.energy - alphap*alpham*(UR.energy - UL.energy))/(alphap + alpham);
@@ -125,25 +143,92 @@ double HLL(int N, Vars * U, Flux * F_HLL){
   return(maxalph);
 }
 
-double advance_system(int N, Vars * U, Flux * F_HLL, double dx){
-  double maxalpha = HLL(N, U, F_HLL);//calculate the flux at the interfaces
+Flux hll( Vars * U, int i, double dx){
+  Flux F_HLL;
+  Vars UL = U_L(U[i-1], U[i-2], U[i], dx); Vars UR = U_R(U[i-1], U[i], U[i+1], dx); //Calculates the conserved variables at the interfaces
+  //Vars UL, UR; UL = U[i-1]; UR=U[i];
+  double alphap = alpha(UL, UR, 1.);
+  double alpham = alpha(UL, UR, -1.);
+  Flux FL = get_F(UL); Flux FR = get_F(UR); //Calculates the Fluxes from the left and right at the interface
+  F_HLL.rhov = (alphap*FL.rhov + alpham*FR.rhov - alphap*alpham*(UR.mass - UL.mass))/(alphap + alpham);
+  F_HLL.mom = (alphap*FL.mom + alpham*FR.mom - alphap*alpham*(UR.velocity - UL.velocity))/(alphap + alpham);
+  F_HLL.energy = (alphap*FL.energy + alpham*FR.energy - alphap*alpham*(UR.energy - UL.energy))/(alphap + alpham);
+  return(F_HLL);
+}
+
+Flux L(Flux FL, Flux FR, double dx){
+  Flux LU;
+  LU.rhov = -1.*(FR.rhov - FL.rhov)/dx;
+  LU.mom = -1.*(FR.mom - FL.mom)/dx;
+  LU.energy = -1.*(FR.energy - FL.energy)/dx;
+  return(LU);
+}
+
+Vars make_U1(double dt, Vars U, Flux LU){
+  Vars U1;
+  U1.mass = U.mass + dt*LU.rhov;
+  U1.velocity = U.velocity + dt*LU.mom;
+  U1.energy = U.energy + dt*LU.energy;
+  U1.press = (gam-1.)*(U1.energy - .5*pow(U1.velocity,2)/U1.mass);
+  return(U1);
+}
+
+Vars make_U2(double dt, Vars U, Vars U1, Flux LU1){
+  Vars U2;
+  U2.mass = 0.75*U.mass + 0.25*U1.mass + 0.25*dt*LU1.rhov;
+  U2.velocity = 0.75*U.velocity + 0.25*U1.velocity + 0.25*dt*LU1.mom;
+  U2.energy = 0.75*U.energy + 0.25*U1.energy + 0.25*dt*LU1.energy;
+  U2.press = (gam-1.)*(U2.energy - .5*pow(U2.velocity,2)/U2.mass);
+  return(U2);
+}
+
+Vars make_UN(double dt, Vars U, Vars U2, Flux LU2){
+  Vars UN;
+  UN.mass = U.mass/3. + 2.*U2.mass/3. + 2.*dt*LU2.rhov/3.;
+  UN.velocity = U.velocity/3. + 2.*U2.velocity/3. + 2.*dt*LU2.mom/3.;
+  UN.energy = U.energy/3. + 2.*U2.energy/3. + 2.*dt*LU2.energy/3.;
+  UN.press = (gam-1.)*(UN.energy - .5*pow(UN.velocity,2)/UN.mass);
+  return(UN);
+}
+
+double Pressure(Vars U){
+  double press;
+  press = (gam-1.)*(U.energy - .5*pow(U.velocity,2)/U.mass);
+  return(press);
+}
+
+
+
+double advance_system(int N, Vars * U, Flux * F_HLL, double dx, int type){
+  double maxalpha = HLL(N, U, F_HLL, dx);//calculate the flux at the interfaces
   double dt = 0.5*dx/maxalpha;//calculate the time step
-  Vars U_n[N]; int i;
-  double coef = dt/dx;
-  for(i=2;i<N+2;++i){
-    U_n[i].mass = U[i].mass - coef*(F_HLL[i-1].rhov - F_HLL[i-2].rhov);
-    U_n[i].velocity = U[i].velocity - coef*(F_HLL[i-1].mom - F_HLL[i-2].mom);
-    U_n[i].energy = U[i].energy - coef*(F_HLL[i-1].energy - F_HLL[i-2].energy);
-    U_n[i].press = (gam-1.)*(U_n[i].energy - .5*pow(U_n[i].velocity,2)/U_n[i].mass);
+  Vars U_n[N+4], Un[N+4], U1, U2; int i;
+  Flux FL, FR, LU;
+  for(i=0;i<N+4;++i){
+    U_n[i] = U[i];
   }
+  for(i=2;i<N+2;++i){//make U1
+    //FL = hll(U, i, dx); FR = hll(U, i+1, dx);
+    FL = F_HLL[i-2]; FR = F_HLL[i-1];
+    LU = L(FL, FR, dx);
+    U_n[i] = make_U1(dt, U[i], LU);
+  }
+  for(i=0;i<N+4;++i){
+    Un[i] = U_n[i];
+  }
+  for(i=2;i<N+2;++i){//make U2 U_n = U1
+    FL = hll(U_n, i, 1.); FR = hll(U_n, i+1, 1.);
+    //LU = L(FL, FR, dx);
+    Un[i] = make_U2(dt, U[i], U_n[i], L(FL, FR, dx));
+  }
+  for(i=2;i<N+2;++i){//make U_n // Un = U2
+    FL = hll(Un, i, 1.); FR = hll(Un, i+1, 1.);
+    LU = L(FL, FR, dx);
+    U_n[i] = make_UN(dt, U[i], Un[i], LU);
+    }
   for(i=2;i<N+2;++i){
     U[i] = U_n[i];
-    /*U[i].mass = U_n[i].mass;
-    U[i].velocity = U_n[i].velocity;
-    U[i].energy = U_n[i].energy;
-    U[i].press = U_n[i].press;*/
   }
-  //printf("max %f\n", maxalpha);
   return(dt);
 }
 
@@ -163,15 +248,16 @@ void Write_Cons(int N, Vars * U, double dx, FILE * fid){
 }
 int main(void){
   FILE * fid, * finit;
-  fid = fopen("data.dat", "w");
+  fid = fopen("data_2nd.dat", "w");
   finit = fopen("init_data.dat", "w");
-  int N = 200; Vars U[N+4]; Flux F_HLL[N+1];
-  double T, t, dt, dx; T = .14; t = 0; dx = 1./(double)N;
-  init_sys(N, U); Write_Cons(N, U, dx, finit);
+  int N = 300; Vars U[N+4]; Flux F_HLL[N+1];
+  double T, t, dt, dx; T = .178; t = 0; dx = 1./(double)N;
+  int type = 2;
+  init_sys(N, U, dx, type); Write_Cons(N, U, dx, finit);
   //int j;for(j=0;j<2;++j){
   while(t<T){
-    dt = advance_system(N, U, F_HLL, dx);
-    t += dt; //printf("dt %f\n", dt);
+    dt = advance_system(N, U, F_HLL, dx, type);
+    t += dt; //printf("****t %f*****\n", t);
     //break;
   }
   //Print_Flux(N+1, F_HLL);

@@ -9,3 +9,4 @@ Includes
 --------
 * 1D_hydro.c -- First order in time & space, 1-D
 * 1D_hydro_2ndO.c -- 3rd order in time, 2nd in space, 1-D
+* 2D_hydro.c -- 3rd order in time, 2nd in space, 2-D
